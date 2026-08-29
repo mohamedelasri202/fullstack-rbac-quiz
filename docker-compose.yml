@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: auth_quiz_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_quiz_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - auth-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_quiz_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Laravel Backend API
+  backend:
+    build:
+      context: ./auth-backend
+      dockerfile: Dockerfile
+    container_name: auth_quiz_backend
+    restart: unless-stopped
+    environment:
+      APP_NAME: TaskFlowAuth
+      APP_ENV: production
+      APP_KEY: base64:x6bV7LgqOqO+wK9Gsm0hP4uGzO9J5Z8V5g4zF5R8N+E=
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres-db
+      DB_PORT: 5432
+      DB_DATABASE: auth_quiz_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: password123
+      SANCTUM_STATEFUL_DOMAINS: localhost:3000,127.0.0.1:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - auth-network
+
+  # 3. Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: auth_quiz_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - auth-network
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  auth-network:
+    driver: bridge
