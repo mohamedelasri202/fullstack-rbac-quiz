@@ -281,5 +281,4 @@ docker compose exec backend php artisan test
 
 **Protected Task API Response**
 *(Insert Postman screenshot here)*
-#   f u l l s t a c k - r b a c - q u i z  
- 
+#
